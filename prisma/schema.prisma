@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model agendamentos {
+  id_agendamento                Int                 @id @default(autoincrement())
+  profissionais_id_profissional Int
+  pacientes_id_paciente         Int
+  enderecos_id_endereco         Int
+  data_horario_inicio           DateTime            @db.DateTime(0)
+  duracao_consulta_minutos      Int
+  data_criacao                  DateTime            @default(now()) @db.DateTime(0)
+  status                        agendamentos_status
+  nota_atendimento              Int?                @db.TinyInt
+  avaliacao                     String?             @db.Text
+  enderecos                     enderecos           @relation(fields: [enderecos_id_endereco], references: [id_endereco], onDelete: NoAction, onUpdate: NoAction, map: "fk_agendamentos_enderecos1")
+  pacientes                     pacientes           @relation(fields: [pacientes_id_paciente], references: [id_paciente], onDelete: NoAction, onUpdate: NoAction, map: "fk_profissionais_has_pacientes_pacientes1")
+  profissionais                 profissionais       @relation(fields: [profissionais_id_profissional], references: [id_profissional], onDelete: NoAction, onUpdate: NoAction, map: "fk_profissionais_has_pacientes_profissionais1")
+
+  @@index([enderecos_id_endereco], map: "fk_agendamentos_enderecos1_idx")
+  @@index([pacientes_id_paciente], map: "fk_profissionais_has_pacientes_pacientes1_idx")
+  @@index([profissionais_id_profissional], map: "fk_profissionais_has_pacientes_profissionais1_idx")
+}
+
+model enderecos {
+  id_endereco      Int             @id @default(autoincrement())
+  estado           String          @db.Char(2)
+  cidade           String          @db.VarChar(100)
+  apelido_endereco String?         @db.VarChar(100)
+  cep              String          @db.VarChar(9)
+  logradouro       String          @db.VarChar(255)
+  numero           String          @db.VarChar(20)
+  bairro           String          @db.VarChar(100)
+  complemento      String?         @db.VarChar(100)
+  agendamentos     agendamentos[]
+  pacientes        pacientes[]
+  profissionais    profissionais[]
+}
+
+model especialidades {
+  id_especialidade            Int                           @id @default(autoincrement())
+  nome_especialidade          String                        @unique(map: "nome_especialidade_UNIQUE") @db.VarChar(100)
+  profissional_especialidades profissional_especialidades[]
+}
+
+model formacoes {
+  id_formacao            Int                      @id @default(autoincrement())
+  formacao               String                   @unique @db.VarChar(255)
+  profissional_formacoes profissional_formacoes[]
+}
+
+model horarios_trabalho {
+  id_horario_trabalho           Int           @id @default(autoincrement())
+  profissionais_id_profissional Int
+  dia_semana                    Int           @db.TinyInt
+  horario_inicio                DateTime      @db.Time(0)
+  horario_fim                   DateTime      @db.Time(0)
+  profissionais                 profissionais @relation(fields: [profissionais_id_profissional], references: [id_profissional], onDelete: NoAction, onUpdate: NoAction, map: "fk_horarios_trabalho_profissionais1")
+
+  @@index([profissionais_id_profissional], map: "fk_horarios_trabalho_profissionais1_idx")
+}
+
+model idiomas {
+  id_idioma            Int                    @id @default(autoincrement())
+  idioma               String                 @unique @db.VarChar(100)
+  profissional_idiomas profissional_idiomas[]
+}
+
+model pacientes {
+  id_paciente           Int                 @id @default(autoincrement())
+  usuarios_id_usuario   Int
+  enderecos_id_endereco Int
+  nome_paciente         String              @db.VarChar(255)
+  cpf                   String              @unique(map: "cpf_UNIQUE") @db.VarChar(14)
+  data_nascimento       DateTime            @db.Date
+  nivel_tea             pacientes_nivel_tea
+  e_titular             Boolean
+  nome_titular          String?             @db.VarChar(255)
+  agendamentos          agendamentos[]
+  enderecos             enderecos           @relation(fields: [enderecos_id_endereco], references: [id_endereco], onDelete: NoAction, onUpdate: NoAction, map: "fk_pacientes_enderecos1")
+  usuarios              usuarios            @relation(fields: [usuarios_id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_pacientes_usuarios1")
+
+  @@index([enderecos_id_endereco], map: "fk_pacientes_enderecos1_idx")
+  @@index([usuarios_id_usuario], map: "fk_pacientes_usuarios1_idx")
+}
+
+model profissionais {
+  id_profissional             Int                           @id @default(autoincrement())
+  usuarios_id_usuario         Int
+  enderecos_id_endereco       Int
+  foto_perfil_url             String?                       @db.VarChar(255)
+  nome                        String                        @db.VarChar(255)
+  cpf                         String                        @unique(map: "cpf_UNIQUE") @db.VarChar(14)
+  tipo_registro               profissionais_tipo_registro
+  numero_registro             String                        @db.VarChar(50)
+  uf_registro                 String                        @db.Char(2)
+  descricao                   String?                       @db.Text
+  valor_consulta              Decimal?                      @db.Decimal(10, 2)
+  aceita_convenio             Boolean?                      @default(false)
+  agendamentos                agendamentos[]
+  horarios_trabalho           horarios_trabalho[]
+  enderecos                   enderecos                     @relation(fields: [enderecos_id_endereco], references: [id_endereco], onDelete: NoAction, onUpdate: NoAction, map: "fk_profissionais_enderecos1")
+  usuarios                    usuarios                      @relation(fields: [usuarios_id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_profissionais_usuarios1")
+  profissional_especialidades profissional_especialidades[]
+  profissional_formacoes      profissional_formacoes[]
+  profissional_idiomas        profissional_idiomas[]
+  profissional_tags           profissional_tags[]
+
+  @@index([enderecos_id_endereco], map: "fk_profissionais_enderecos1_idx")
+  @@index([usuarios_id_usuario], map: "fk_profissionais_usuarios1_idx")
+}
+
+model profissional_especialidades {
+  profissionais_id_profissional   Int
+  especialidades_id_especialidade Int
+  especialidades                  especialidades @relation(fields: [especialidades_id_especialidade], references: [id_especialidade], onDelete: NoAction, onUpdate: NoAction, map: "fk_especialidades_has_profissionais_especialidades1")
+  profissionais                   profissionais  @relation(fields: [profissionais_id_profissional], references: [id_profissional], onDelete: NoAction, onUpdate: NoAction, map: "fk_especialidades_has_profissionais_profissionais1")
+
+  @@id([profissionais_id_profissional, especialidades_id_especialidade])
+  @@index([especialidades_id_especialidade], map: "fk_especialidades_has_profissionais_especialidades1_idx")
+  @@index([profissionais_id_profissional], map: "fk_especialidades_has_profissionais_profissionais1_idx")
+}
+
+model profissional_formacoes {
+  formacoes_id_formacao         Int
+  profissionais_id_profissional Int
+  formacoes                     formacoes     @relation(fields: [formacoes_id_formacao], references: [id_formacao], onDelete: NoAction, onUpdate: NoAction, map: "fk_formacoes_has_profissionais_formacoes1")
+  profissionais                 profissionais @relation(fields: [profissionais_id_profissional], references: [id_profissional], onDelete: NoAction, onUpdate: NoAction, map: "fk_formacoes_has_profissionais_profissionais1")
+
+  @@id([formacoes_id_formacao, profissionais_id_profissional])
+  @@index([formacoes_id_formacao], map: "fk_formacoes_has_profissionais_formacoes1_idx")
+  @@index([profissionais_id_profissional], map: "fk_formacoes_has_profissionais_profissionais1_idx")
+}
+
+model profissional_idiomas {
+  idiomas_id_idioma             Int
+  profissionais_id_profissional Int
+  idiomas                       idiomas       @relation(fields: [idiomas_id_idioma], references: [id_idioma], onDelete: NoAction, onUpdate: NoAction, map: "fk_idiomas_has_profissionais_idiomas1")
+  profissionais                 profissionais @relation(fields: [profissionais_id_profissional], references: [id_profissional], onDelete: NoAction, onUpdate: NoAction, map: "fk_idiomas_has_profissionais_profissionais1")
+
+  @@id([idiomas_id_idioma, profissionais_id_profissional])
+  @@index([idiomas_id_idioma], map: "fk_idiomas_has_profissionais_idiomas1_idx")
+  @@index([profissionais_id_profissional], map: "fk_idiomas_has_profissionais_profissionais1_idx")
+}
+
+model profissional_tags {
+  tags_id_tag                   Int
+  profissionais_id_profissional Int
+  profissionais                 profissionais @relation(fields: [profissionais_id_profissional], references: [id_profissional], onDelete: NoAction, onUpdate: NoAction, map: "fk_tags_has_profissionais_profissionais1")
+  tags                          tags          @relation(fields: [tags_id_tag], references: [id_tag], onDelete: NoAction, onUpdate: NoAction, map: "fk_tags_has_profissionais_tags1")
+
+  @@id([tags_id_tag, profissionais_id_profissional])
+  @@index([profissionais_id_profissional], map: "fk_tags_has_profissionais_profissionais1_idx")
+  @@index([tags_id_tag], map: "fk_tags_has_profissionais_tags1_idx")
+}
+
+model tags {
+  id_tag            Int                 @id @default(autoincrement())
+  nome_tag          String              @unique @db.VarChar(100)
+  profissional_tags profissional_tags[]
+}
+
+model telefones {
+  id_telefone         Int            @id @default(autoincrement())
+  usuarios_id_usuario Int
+  ddd                 String         @db.VarChar(2)
+  numero              String         @db.VarChar(10)
+  tipo                telefones_tipo
+  usuarios            usuarios       @relation(fields: [usuarios_id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction, map: "fk_telefones_usuarios")
+
+  @@index([usuarios_id_usuario], map: "fk_telefones_usuarios_idx")
+}
+
+model usuarios {
+  id_usuario    Int             @id @default(autoincrement())
+  email         String          @unique(map: "email_UNIQUE") @db.VarChar(255)
+  senha         String          @db.VarChar(255)
+  data_criacao  DateTime        @default(now()) @db.DateTime(0)
+  pacientes     pacientes[]
+  profissionais profissionais[]
+  telefones     telefones[]
+}
+
+enum telefones_tipo {
+  CELULAR
+  RESIDENCIAL
+  COMERCIAL
+}
+
+enum profissionais_tipo_registro {
+  CRM
+  CRP
+  CRFa
+  CREFITO
+  CREA
+}
+
+enum pacientes_nivel_tea {
+  N_VEL_1 @map("NÍVEL 1")
+  N_VEL_2 @map("NÍVEL 2")
+  N_VEL_3 @map("NÍVEL 3")
+}
+
+enum agendamentos_status {
+  AGENDADO
+  CANCELADO
+  FINALIZADO
+}
