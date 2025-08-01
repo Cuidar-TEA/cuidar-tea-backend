@@ -2,7 +2,7 @@
 
 <p align="center">
   <img alt="Status do Projeto" src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow">
-  <img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-red">
+  <img alt="Licença" src="https://img.shields.io/badge/licen%C3%A7a-MIT License-red">
 </p>
 
 <p align="center">
