@@ -1,7 +1,7 @@
 {
   "name": "cuidar-tea",
   "version": "1.0.0",
-  "description": "Change later...",
+  "description": "Backend da aplicação Cuidar TEA, uma plataforma para conectar pessoas com TEA e seus familiares a profissionais especializados.",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/limajpp/cuidar-tea#readme",
   "dependencies": {
-    "@prisma/client": "^6.12.0",
+    "@prisma/client": "^6.13.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
@@ -48,7 +48,7 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "dotenv": "^17.2.0",
-    "prisma": "^6.12.0",
+    "prisma": "^6.13.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
   }
