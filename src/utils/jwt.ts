@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import convertExpirationToSeconds from "./timeConvert";
+import converterParaSegundos from "./timeConvert";
 
 dotenv.config();
 
@@ -14,7 +14,7 @@ if (!JWT_EXPIRES_IN) {
 }
 
 export const generateToken = (payload: object) => {
-  const expiresInSeconds = convertExpirationToSeconds(JWT_EXPIRES_IN)
+  const expiresInSeconds = converterParaSegundos(JWT_EXPIRES_IN);
   return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresInSeconds });
 };
 
