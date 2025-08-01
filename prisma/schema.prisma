@@ -51,7 +51,7 @@ model especialidades {
 
 model formacoes {
   id_formacao            Int                      @id @default(autoincrement())
-  formacao               String                   @unique @db.VarChar(255)
+  formacao               String                   @unique(map: "formacao_UNIQUE") @db.VarChar(255)
   profissional_formacoes profissional_formacoes[]
 }
 
@@ -68,7 +68,7 @@ model horarios_trabalho {
 
 model idiomas {
   id_idioma            Int                    @id @default(autoincrement())
-  idioma               String                 @unique @db.VarChar(100)
+  idioma               String                 @unique(map: "idioma_UNIQUE") @db.VarChar(100)
   profissional_idiomas profissional_idiomas[]
 }
 
@@ -103,6 +103,7 @@ model profissionais {
   descricao                   String?                       @db.Text
   valor_consulta              Decimal?                      @db.Decimal(10, 2)
   aceita_convenio             Boolean?                      @default(false)
+  atende_domicilio            Int?                          @default(0) @db.TinyInt
   agendamentos                agendamentos[]
   horarios_trabalho           horarios_trabalho[]
   enderecos                   enderecos                     @relation(fields: [enderecos_id_endereco], references: [id_endereco], onDelete: NoAction, onUpdate: NoAction, map: "fk_profissionais_enderecos1")
@@ -162,7 +163,7 @@ model profissional_tags {
 
 model tags {
   id_tag            Int                 @id @default(autoincrement())
-  nome_tag          String              @unique @db.VarChar(100)
+  nome_tag          String              @unique(map: "nome_tag_UNIQUE") @db.VarChar(100)
   profissional_tags profissional_tags[]
 }
 
