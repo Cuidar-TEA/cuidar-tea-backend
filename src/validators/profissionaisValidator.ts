@@ -9,6 +9,12 @@ export const buscarProfissionaisSchema = z.object({
       .string()
       .transform((val) => val === "true")
       .optional(),
+    nota_atendimento: z.coerce.number().min(1).max(5).optional(),
+    valor_consulta: z.coerce.number().min(1).optional(),
+    atende_domicilio: z
+      .string()
+      .transform((val) => val === "true")
+      .optional(),
   }),
 });
 
