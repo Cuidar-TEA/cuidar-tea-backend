@@ -15,6 +15,8 @@ export const buscarProfissionaisSchema = z.object({
       .string()
       .transform((val) => val === "true")
       .optional(),
+    nome: z.string().optional(),
+    formacao: z.string().optional(),
   }),
 });
 

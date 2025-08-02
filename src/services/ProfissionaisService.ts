@@ -210,6 +210,22 @@ export class ProfissionalService {
         },
       };
     }
+    if (filtros.nome) {
+      where.nome = {
+        contains: filtros.nome,
+      };
+    }
+    if (filtros.formacao) {
+      where.profissional_formacoes = {
+        some: {
+          formacoes: {
+            formacao: {
+              equals: filtros.formacao,
+            },
+          },
+        },
+      };
+    }
 
     const profissionais = await this.profissionalRepository.buscarMuitos({
       where,
