@@ -230,59 +230,62 @@ profissionaisRoutes.get("/pacientes-ativos", authMiddleware, (req, res) =>
  *     summary: Busca e filtra profissionais
  *     tags:
  *       - Profissionais
- *     description: Retorna uma lista de profissionais com base nos filtros fornecidos via query params. Rota pública.
+ *     description: "Retorna uma lista de profissionais com base nos filtros fornecidos via query params. Rota pública."
  *     parameters:
  *       - in: query
  *         name: especialidade
  *         schema:
  *           type: string
- *         description: >
- *           Filtra por nome da especialidade (ex: Psicologia).
+ *         description: "Filtra por nome da especialidade (ex: Psicologia)."
  *       - in: query
  *         name: cidade
  *         schema:
  *           type: string
- *         description: >
- *           Filtra pela cidade de um dos endereços do profissional.
+ *         description: "Filtra pela cidade de um dos endereços do profissional."
  *       - in: query
  *         name: estado
  *         schema:
  *           type: string
- *         description: >
- *           Filtra pelo estado (UF) de um dos endereços do profissional.
+ *         description: "Filtra pelo estado (UF) de um dos endereços do profissional."
  *       - in: query
  *         name: aceita_convenio
  *         schema:
  *           type: boolean
- *         description: >
- *           Filtra por profissionais que aceitam convênio (true/false).
- *       - in: query
- *         name: atende_domicilio
- *         schema:
- *           type: boolean
- *         description: >
- *           Filtra por profissionais que atendem a domicílio (true/false).
- *       - in: query
- *         name: valor_consulta
- *         schema:
- *           type: number
- *         description: >
- *           Filtra por profissionais cujo valor da consulta é menor ou igual ao valor fornecido.
+ *         description: "Filtra por profissionais que aceitam convênio (true/false)."
  *       - in: query
  *         name: nota_atendimento
  *         schema:
  *           type: number
  *           minimum: 1
  *           maximum: 5
- *         description: >
- *           Filtra por profissionais cuja média de avaliação é maior ou igual ao valor fornecido (1 a 5).
+ *         description: "Filtra por profissionais com média de avaliação maior ou igual ao valor fornecido (1 a 5)."
+ *       - in: query
+ *         name: valor_consulta
+ *         schema:
+ *           type: number
+ *           minimum: 1
+ *         description: "Filtra por profissionais cujo valor da consulta é menor ou igual ao valor fornecido."
+ *       - in: query
+ *         name: atende_domicilio
+ *         schema:
+ *           type: boolean
+ *         description: "Filtra por profissionais que atendem a domicílio (true/false)."
+ *       - in: query
+ *         name: nome
+ *         schema:
+ *           type: string
+ *         description: "Filtra por parte do nome do profissional."
+ *       - in: query
+ *         name: formacao
+ *         schema:
+ *           type: string
+ *         description: "Filtra pela profissão principal do profissional (ex: Fisioterapeuta)."
  *     responses:
  *       '200':
- *         description: Lista de profissionais retornada com sucesso.
+ *         description: "Lista de profissionais retornada com sucesso."
  *       '400':
- *         description: Filtro com formato inválido.
+ *         description: "Filtro com formato inválido."
  */
-
 profissionaisRoutes.get("/", validate(buscarProfissionaisSchema), (req, res) =>
   profissionalController.buscar(req, res)
 );

@@ -15,6 +15,22 @@ export const buscarProfissionaisSchema = z.object({
       .string()
       .transform((val) => val === "true")
       .optional(),
+    nome: z
+      .string()
+      .trim()
+      .min(1, "O nome não pode ser vazio.")
+      .regex(/^[A-Za-zÀ-ÿ\s]+$/, {
+        message: "O nome deve conter apenas letras e espaços.",
+      })
+      .optional(),
+    formacao: z
+      .string()
+      .trim()
+      .min(1, "A formação não pode ser vazia.")
+      .regex(/^[A-Za-zÀ-ÿ\s]+$/, {
+        message: "A formação deve conter apenas letras e espaços.",
+      })
+      .optional(),
   }),
 });
 
