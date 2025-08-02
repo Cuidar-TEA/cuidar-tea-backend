@@ -1,46 +1,83 @@
-import { PrismaClient } from "../generated/prisma";
 import { CriarAgendamentoDTO } from "../validators/agendamentosValidator";
 import { AvaliarAgendamentoDTO } from "../validators/agendamentosValidator";
-
-const prisma = new PrismaClient();
+import { AgendamentosRepository } from "../repositories/AgendamentosRepository";
+import { HorariosTrabalhoRepository } from "../repositories/HorariosTrabalhoRepository";
+import prisma from "../config/prismaClient";
 
 export class AgendamentosService {
+  private agendamentosRepository: AgendamentosRepository;
+  private horariosTrabalhoRepository: HorariosTrabalhoRepository;
+
+  constructor() {
+    this.agendamentosRepository = new AgendamentosRepository();
+    this.horariosTrabalhoRepository = new HorariosTrabalhoRepository();
+  }
+
   public async criarAgendamento(
     idPaciente: number,
     dadosAgendamento: CriarAgendamentoDTO
   ) {
-    const dataHoraInicio = dadosAgendamento.data_horario_inicio;
-    const conflitoExistente = await prisma.agendamentos.findFirst({
-      where: {
-        profissionais_id_profissional:
-          dadosAgendamento.profissionais_id_profissional,
-        data_horario_inicio: dataHoraInicio,
-        status: "AGENDADO",
-      },
+    const dataHoraInicio = new Date(dadosAgendamento.data_horario_inicio);
+    if (isNaN(dataHoraInicio.getTime())) {
+      throw new Error("Data inválida fornecida para o agendamento.");
+    }
+
+    const diaDaSemana =
+      dataHoraInicio.getUTCDay() === 0 ? 7 : dataHoraInicio.getUTCDay();
+    const horaSolicitada =
+      dataHoraInicio.getUTCHours() * 60 + dataHoraInicio.getUTCMinutes();
+
+    const regrasDeTrabalho =
+      await this.horariosTrabalhoRepository.buscarPorProfissionalEDia(
+        dadosAgendamento.profissionais_id_profissional,
+        diaDaSemana
+      );
+
+    const horarioValido = regrasDeTrabalho.some((regra) => {
+      const inicioMinutos =
+        regra.horario_inicio.getUTCHours() * 60 +
+        regra.horario_inicio.getUTCMinutes();
+      const fimMinutos =
+        regra.horario_fim.getUTCHours() * 60 +
+        regra.horario_fim.getUTCMinutes();
+      return horaSolicitada >= inicioMinutos && horaSolicitada < fimMinutos;
     });
+    if (!horarioValido) {
+      throw new Error(
+        "O profissional não atende no dia ou horário solicitado."
+      );
+    }
+
+    const conflitoExistente = await this.agendamentosRepository.buscarConflito(
+      dadosAgendamento.profissionais_id_profissional,
+      dataHoraInicio
+    );
     if (conflitoExistente) {
       throw new Error(
         "Este horário acabou de ser preenchido. Por favor, escolha outro."
       );
     }
 
-    const novoAgendamento = await prisma.agendamentos.create({
-      data: {
-        pacientes_id_paciente: idPaciente,
-        profissionais_id_profissional:
-          dadosAgendamento.profissionais_id_profissional,
-        enderecos_id_endereco: dadosAgendamento.enderecos_id_endereco,
-        data_horario_inicio: dataHoraInicio,
-        duracao_consulta_minutos: dadosAgendamento.duracao_consulta_minutos,
-        status: "AGENDADO", // Status default de qualquer agendamento criado.
-      },
-      include: {
-        profissionais: true,
-        enderecos: true,
-      },
+    return prisma.$transaction(async (tx) => {
+      const novoAgendamento = await this.agendamentosRepository.criar(
+        {
+          pacientes: { connect: { id_paciente: idPaciente } },
+          profissionais: {
+            connect: {
+              id_profissional: dadosAgendamento.profissionais_id_profissional,
+            },
+          },
+          enderecos: {
+            connect: { id_endereco: dadosAgendamento.enderecos_id_endereco },
+          },
+          data_horario_inicio: dataHoraInicio,
+          duracao_consulta_minutos: dadosAgendamento.duracao_consulta_minutos,
+          status: "AGENDADO",
+        },
+        tx
+      );
+      return novoAgendamento;
     });
-
-    return novoAgendamento;
   }
 
   public async adicionarAvaliacao(
@@ -48,9 +85,9 @@ export class AgendamentosService {
     idPaciente: number,
     dadosAvaliacao: AvaliarAgendamentoDTO
   ) {
-    const agendamento = await prisma.agendamentos.findUnique({
-      where: { id_agendamento: idAgendamento },
-    });
+    const agendamento = await this.agendamentosRepository.buscarPorId(
+      idAgendamento
+    );
     if (!agendamento) {
       throw new Error("Agendamento não encontrado.");
     }
@@ -68,30 +105,19 @@ export class AgendamentosService {
       throw new Error("Este agendamento já foi avaliado anteriormente.");
     }
 
-    const agendamentoAtualizado = await prisma.agendamentos.update({
-      where: {
-        id_agendamento: idAgendamento,
-      },
-      data: {
-        nota_atendimento: dadosAvaliacao.nota_atendimento,
-        avaliacao: dadosAvaliacao.avaliacao,
-      },
+    return this.agendamentosRepository.atualizar(idAgendamento, {
+      nota_atendimento: dadosAvaliacao.nota_atendimento,
+      avaliacao: dadosAvaliacao.avaliacao,
     });
-
-    return agendamentoAtualizado;
   }
 
   public async finalizarAgendamento(
     idAgendamento: number,
     idUsuarioLogado: number
   ) {
-    const agendamento = await prisma.agendamentos.findUnique({
-      where: { id_agendamento: idAgendamento },
-      include: {
-        pacientes: { select: { usuarios_id_usuario: true } },
-        profissionais: { select: { usuarios_id_usuario: true } },
-      },
-    });
+    const agendamento = await this.agendamentosRepository.buscarPorIdComPerfis(
+      idAgendamento
+    );
     if (!agendamento) {
       throw new Error("Agendamento não encontrado.");
     }
@@ -112,29 +138,18 @@ export class AgendamentosService {
       );
     }
 
-    const agendamentoFinalizado = await prisma.agendamentos.update({
-      where: {
-        id_agendamento: idAgendamento,
-      },
-      data: {
-        status: "FINALIZADO",
-      },
+    return this.agendamentosRepository.atualizar(idAgendamento, {
+      status: "FINALIZADO",
     });
-
-    return agendamentoFinalizado;
   }
 
   public async cancelarAgendamento(
     idAgendamento: number,
     idUsuarioLogado: number
   ) {
-    const agendamento = await prisma.agendamentos.findUnique({
-      where: { id_agendamento: idAgendamento },
-      include: {
-        pacientes: { select: { usuarios_id_usuario: true } },
-        profissionais: { select: { usuarios_id_usuario: true } },
-      },
-    });
+    const agendamento = await this.agendamentosRepository.buscarPorIdComPerfis(
+      idAgendamento
+    );
     if (!agendamento) {
       throw new Error("Agendamento não encontrado.");
     }
@@ -143,7 +158,6 @@ export class AgendamentosService {
       agendamento.pacientes.usuarios_id_usuario === idUsuarioLogado;
     const isProfissional =
       agendamento.profissionais.usuarios_id_usuario === idUsuarioLogado;
-
     if (!isPaciente && !isProfissional) {
       throw new Error(
         "Acesso negado. Você não tem permissão para cancelar este agendamento."
@@ -155,46 +169,14 @@ export class AgendamentosService {
       );
     }
 
-    const agendamentoCancelado = await prisma.agendamentos.update({
-      where: {
-        id_agendamento: idAgendamento,
-      },
-      data: {
-        status: "CANCELADO",
-      },
+    return this.agendamentosRepository.atualizar(idAgendamento, {
+      status: "CANCELADO",
     });
-
-    return agendamentoCancelado;
   }
 
   public async listarAgendamentosPorPaciente(idPaciente: number) {
-    const agendamentos = await prisma.agendamentos.findMany({
-      where: {
-        pacientes_id_paciente: idPaciente,
-        status: "AGENDADO",
-      },
-      orderBy: {
-        data_horario_inicio: "asc",
-      },
-      include: {
-        profissionais: {
-          select: {
-            nome: true,
-            foto_perfil_url: true,
-          },
-        },
-        enderecos: {
-          select: {
-            logradouro: true,
-            numero: true,
-            cidade: true,
-            estado: true,
-            apelido_endereco: true,
-          },
-        },
-      },
-    });
-
+    const agendamentos =
+      await this.agendamentosRepository.buscarAtivosPorPaciente(idPaciente);
     if (!agendamentos) {
       return [];
     }

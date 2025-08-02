@@ -1,36 +1,34 @@
-import { PrismaClient } from "../generated/prisma";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/jwt";
-
-const prisma = new PrismaClient();
+import { UsuarioRepository } from "../repositories/UsuariosRepository";
 
 export class AuthService {
-  // Criação do método para login dos usuários.
+  private usuarioRepository: UsuarioRepository;
+
+  constructor() {
+    this.usuarioRepository = new UsuarioRepository();
+  }
+
   public async login(email: string, senha: string) {
-    const usuario = await prisma.usuarios.findUnique({
-      where: { email },
-      include: { pacientes: true, profissionais: true },
-    });
-
-    let tipoUsuario: string;
-
+    const usuario = await this.usuarioRepository.buscarContasPorEmail(email);
     if (!usuario) {
       throw new Error("Usuário não encontrado");
     }
-    tipoUsuario = usuario.pacientes.length > 0 ? "paciente" : "profissional";
+    const tipoUsuario =
+      usuario.pacientes.length > 0 ? "paciente" : "profissional";
 
-    const senhaCriptografada = await bcrypt.compare(senha, usuario.senha);
-
-    if (!senhaCriptografada) {
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaCorreta) {
       throw new Error("Senha inválida");
     }
 
-    const tokenPayLoad = {
+    const tokenPayload = {
       id_usuario: usuario.id_usuario,
       email: usuario.email,
       tipoUsuario,
     };
-    const token = generateToken(tokenPayLoad);
+    const token = generateToken(tokenPayload);
+
     return { tipoUsuario, token };
   }
 }
