@@ -257,7 +257,7 @@ profissionaisRoutes.get("/pacientes-ativos", authMiddleware, (req, res) =>
  *         description: >
  *           Filtra por profissionais que aceitam convênio (true/false).
  *       - in: query
- *         name: atnde_domicilio
+ *         name: atende_domicilio
  *         schema:
  *           type: boolean
  *         description: >
