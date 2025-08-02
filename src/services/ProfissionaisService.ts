@@ -218,17 +218,51 @@ export class ProfissionalService {
   public async buscarProfissionais(filtros: BuscarProfissionaisDTO) {
     const where: Prisma.profissionaisWhereInput = {};
 
+    // Se o filtro de avaliação foi passado, filtramos os IDs dos profissionais primeiro.
+    if (filtros.nota_atendimento) {
+      const mediasDeAvaliacao = await (prisma.agendamentos.groupBy as any)({
+        by: ["profissionais_id_profissional"],
+        _avg: {
+          nota_atendimento: true,
+        },
+        having: {
+          nota_atendimento: {
+            _avg: {
+              gte: filtros.nota_atendimento,
+            },
+          },
+        },
+      });
+
+      const idsProfissionaisPorAvaliacao = mediasDeAvaliacao.map(
+        (a: { profissionais_id_profissional: number }) =>
+          a.profissionais_id_profissional
+      );
+      if (idsProfissionaisPorAvaliacao.length === 0) {
+        return [];
+      }
+      where.id_profissional = {
+        in: idsProfissionaisPorAvaliacao,
+      };
+    }
+
     if (filtros.aceita_convenio !== undefined) {
       where.aceita_convenio = filtros.aceita_convenio;
     }
-
+    if (filtros.atende_domicilio !== undefined) {
+      where.atende_domicilio = filtros.atende_domicilio ? 1 : 0;
+    }
+    if (filtros.valor_consulta) {
+      where.valor_consulta = {
+        lte: filtros.valor_consulta,
+      };
+    }
     if (filtros.cidade || filtros.estado) {
       where.enderecos = {
         cidade: filtros.cidade ? { equals: filtros.cidade } : undefined,
         estado: filtros.estado ? { equals: filtros.estado } : undefined,
       };
     }
-
     if (filtros.especialidade) {
       where.profissional_especialidades = {
         some: {
@@ -248,6 +282,16 @@ export class ProfissionalService {
         profissional_especialidades: {
           include: {
             especialidades: true,
+          },
+        },
+        agendamentos: {
+          where: {
+            nota_atendimento: {
+              not: null,
+            },
+          },
+          select: {
+            nota_atendimento: true, 
           },
         },
       },

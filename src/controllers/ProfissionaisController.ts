@@ -1,8 +1,12 @@
 import { Request, Response } from "express";
 import { ProfissionalService } from "../services/ProfissionaisService";
-import { HorariosTrabalhoDTO } from "../validators/profissionaisValidator";
+import {
+  buscarProfissionaisSchema,
+  HorariosTrabalhoDTO,
+} from "../validators/profissionaisValidator";
 import { AtualizarPerfilProfissionalDTO } from "../validators/profissionaisValidator";
 import { BuscarProfissionaisDTO } from "../validators/profissionaisValidator";
+import z from "zod";
 
 const profissionalService = new ProfissionalService();
 
@@ -182,17 +186,23 @@ export class ProfissionalController {
 
   public async buscar(req: Request, res: Response): Promise<Response> {
     try {
-      const filtros: BuscarProfissionaisDTO = req.query;
-      if (req.query.aceita_convenio !== undefined) {
-        filtros.aceita_convenio = req.query.aceita_convenio === "true";
-      }
-
+      const validatedQuery = buscarProfissionaisSchema.parse({
+        query: req.query,
+      });
+      const filtros: BuscarProfissionaisDTO = validatedQuery.query;
       const profissionais = await profissionalService.buscarProfissionais(
         filtros
       );
 
       return res.status(200).json(profissionais);
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Erro de validação nos filtros.",
+          errors: error,
+        });
+      }
+
       console.error("Erro ao buscar profissionais:", error);
       return res
         .status(500)

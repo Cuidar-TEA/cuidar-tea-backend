@@ -256,12 +256,33 @@ profissionaisRoutes.get("/pacientes-ativos", authMiddleware, (req, res) =>
  *           type: boolean
  *         description: >
  *           Filtra por profissionais que aceitam convênio (true/false).
+ *       - in: query
+ *         name: atnde_domicilio
+ *         schema:
+ *           type: boolean
+ *         description: >
+ *           Filtra por profissionais que atendem a domicílio (true/false).
+ *       - in: query
+ *         name: valor_consulta
+ *         schema:
+ *           type: number
+ *         description: >
+ *           Filtra por profissionais cujo valor da consulta é menor ou igual ao valor fornecido.
+ *       - in: query
+ *         name: nota_atendimento
+ *         schema:
+ *           type: number
+ *           minimum: 1
+ *           maximum: 5
+ *         description: >
+ *           Filtra por profissionais cuja média de avaliação é maior ou igual ao valor fornecido (1 a 5).
  *     responses:
  *       '200':
  *         description: Lista de profissionais retornada com sucesso.
  *       '400':
  *         description: Filtro com formato inválido.
  */
+
 profissionaisRoutes.get("/", validate(buscarProfissionaisSchema), (req, res) =>
   profissionalController.buscar(req, res)
 );
