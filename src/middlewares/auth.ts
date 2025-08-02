@@ -1,16 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt";
-import { PrismaClient } from "../generated/prisma";
+import { ProfissionalRepository } from "../repositories/ProfissionaisRepository";
+import { PacienteRepository } from "../repositories/PacientesRepository";
 
-const prisma = new PrismaClient();
+const profissionalRepository = new ProfissionalRepository();
+const pacienteRepository = new PacienteRepository();
 
 declare global {
   namespace Express {
     interface Request {
       usuario?: {
         id_usuario: number;
-        id_profissional?: number; // Opcional, pois nem todo usuário é profissional.
-        id_paciente?: number; // Opcional, pois nem todo usuário é paciente.
+        id_profissional?: number;
+        id_paciente?: number;
       };
     }
   }
@@ -26,7 +28,6 @@ export const authMiddleware = async (
   next: NextFunction
 ) => {
   const authHeader = req.headers.authorization;
-
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
       message: "Token de autenticação não fornecido ou mal formatado.",
@@ -34,7 +35,6 @@ export const authMiddleware = async (
   }
 
   const token = authHeader.split(" ")[1];
-
   const decodedPayload = verifyToken(token);
   if (
     !decodedPayload ||
@@ -43,21 +43,15 @@ export const authMiddleware = async (
   ) {
     return res.status(401).json({ message: "Token inválido ou expirado." });
   }
-
   const payload = decodedPayload as JwtPayloadWithId;
+
   try {
-    const profissional = await prisma.profissionais.findFirst({
-      where: {
-        usuarios_id_usuario: payload.id_usuario,
-      },
-    });
-
-    const paciente = await prisma.pacientes.findFirst({
-      where: {
-        usuarios_id_usuario: payload.id_usuario,
-      },
-    });
-
+    const profissional = await profissionalRepository.buscarProfissionalPorId(
+      payload.id_usuario
+    );
+    const paciente = await pacienteRepository.buscarPacientePorId(
+      payload.id_usuario
+    );
     if (!profissional && !paciente) {
       return res
         .status(403)

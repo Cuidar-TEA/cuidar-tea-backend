@@ -1,47 +1,60 @@
-import prisma from "../config/prismaClient";
 import hashPassword from "../utils/password";
 import {
   criarUsuarioDTO,
   criarContaProfissionalDTO,
   criarContaFamiliaDTO,
 } from "../DTOs/usuarioDTO";
+import { UsuarioRepository } from "../repositories/UsuariosRepository";
+import { PacienteRepository } from "../repositories/PacientesRepository";
+import { ProfissionalRepository } from "../repositories/ProfissionaisRepository";
+import { EnderecoRepository } from "../repositories/EnderecosRepository";
+import { TelefoneRepository } from "../repositories/TelefonesRepository";
+import prisma from "../config/prismaClient";
 
 export class UsuarioService {
+  private usuarioRepository: UsuarioRepository;
+  private pacienteRepository: PacienteRepository;
+  private profissionalRepository: ProfissionalRepository;
+  private enderecoRepository: EnderecoRepository;
+  private telefoneRepository: TelefoneRepository;
+
+  constructor() {
+    this.usuarioRepository = new UsuarioRepository();
+    this.pacienteRepository = new PacienteRepository();
+    this.profissionalRepository = new ProfissionalRepository();
+    this.enderecoRepository = new EnderecoRepository();
+    this.telefoneRepository = new TelefoneRepository();
+  }
+
   public async criarContaFamilia(
     DTOUsuario: criarUsuarioDTO,
     DTOPaciente: criarContaFamiliaDTO
   ) {
-    const emailExistente = await prisma.usuarios.findUnique({
-      where: { email: DTOUsuario.email },
-    });
+    const emailExistente = await this.usuarioRepository.buscarUsuarioPorEmail(
+      DTOUsuario.email
+    );
     if (emailExistente) throw new Error("Este e-mail já está em uso.");
 
-    const cpfExistente = await prisma.pacientes.findUnique({
-      where: { cpf: DTOPaciente.cpf },
-    });
+    const cpfExistente = await this.pacienteRepository.buscarPacientePorCpf(
+      DTOPaciente.cpf
+    );
     if (cpfExistente) throw new Error("Este CPF já está cadastrado.");
 
     const senhaHash = await hashPassword(DTOUsuario.senha);
+
     return prisma.$transaction(async (tx) => {
-      const novoUsuario = await tx.usuarios.create({
-        data: {
+      const novoUsuario = await this.usuarioRepository.criarNovoUsuario(
+        {
           email: DTOUsuario.email,
           senha: senhaHash,
         },
-      });
+        tx
+      );
 
-      const novoEndereco = await tx.enderecos.create({
-        data: {
-          cep: DTOPaciente.endereco.cep,
-          logradouro: DTOPaciente.endereco.logradouro,
-          numero: DTOPaciente.endereco.numero,
-          bairro: DTOPaciente.endereco.bairro,
-          cidade: DTOPaciente.endereco.cidade,
-          estado: DTOPaciente.endereco.estado,
-          complemento: DTOPaciente.endereco.complemento,
-          apelido_endereco: DTOPaciente.endereco.apelido_endereco,
-        },
-      });
+      const novoEndereco = await this.enderecoRepository.criarNovoEndereco(
+        DTOPaciente.endereco,
+        tx
+      );
 
       let dadosPaciente;
       if (DTOPaciente.e_titular) {
@@ -62,24 +75,24 @@ export class UsuarioService {
         };
       }
 
-      const novoPaciente = await tx.pacientes.create({
-        data: {
-          usuarios_id_usuario: novoUsuario.id_usuario,
-          enderecos_id_endereco: novoEndereco.id_endereco,
+      const novoPaciente = await this.pacienteRepository.criarNovoPaciente(
+        {
+          usuarios: { connect: { id_usuario: novoUsuario.id_usuario } },
+          enderecos: { connect: { id_endereco: novoEndereco.id_endereco } },
           ...dadosPaciente,
           data_nascimento: new Date(DTOPaciente.data_nascimento),
           nivel_tea: DTOPaciente.nivel_tea,
         },
-      });
+        tx
+      );
 
-      await tx.telefones.create({
-        data: {
-          usuarios_id_usuario: novoUsuario.id_usuario,
-          ddd: DTOPaciente.telefone.ddd,
-          numero: DTOPaciente.telefone.numero,
-          tipo: DTOPaciente.telefone.tipo,
+      await this.telefoneRepository.criarNovoTelefone(
+        {
+          usuarios: { connect: { id_usuario: novoUsuario.id_usuario } },
+          ...DTOPaciente.telefone,
         },
-      });
+        tx
+      );
 
       const { senha, ...usuarioSeguro } = novoUsuario;
       return { usuario: usuarioSeguro, paciente: novoPaciente };
@@ -90,72 +103,76 @@ export class UsuarioService {
     DTOUsuario: criarUsuarioDTO,
     DTOProfissional: criarContaProfissionalDTO
   ) {
-    const emailExistente = await prisma.usuarios.findUnique({
-      where: { email: DTOUsuario.email },
-    });
+    const emailExistente = await this.usuarioRepository.buscarUsuarioPorEmail(
+      DTOUsuario.email
+    );
     if (emailExistente) throw new Error("Este e-mail já está em uso.");
 
-    const cpfExistente = await prisma.profissionais.findUnique({
-      where: { cpf: DTOProfissional.cpf },
-    });
+    const cpfExistente =
+      await this.profissionalRepository.buscarProfissionalPorCpf(
+        DTOProfissional.cpf
+      );
     if (cpfExistente) throw new Error("Este CPF já está cadastrado.");
 
     const senhaHash = await hashPassword(DTOUsuario.senha);
+
     return prisma.$transaction(async (tx) => {
-      const novoUsuario = await tx.usuarios.create({
-        data: {
+      const novoUsuario = await this.usuarioRepository.criarNovoUsuario(
+        {
           email: DTOUsuario.email,
           senha: senhaHash,
         },
-      });
+        tx
+      );
 
-      const novoEndereco = await tx.enderecos.create({
-        data: {
-          ...DTOProfissional.endereco,
-        },
-      });
+      const novoEndereco = await this.enderecoRepository.criarNovoEndereco(
+        DTOProfissional.endereco,
+        tx
+      );
 
-      const novoProfissional = await tx.profissionais.create({
-        data: {
-          usuarios_id_usuario: novoUsuario.id_usuario,
-          enderecos_id_endereco: novoEndereco.id_endereco,
-          nome: DTOProfissional.nome,
-          cpf: DTOProfissional.cpf,
-          tipo_registro: DTOProfissional.tipo_registro,
-          numero_registro: DTOProfissional.numero_registro,
-          uf_registro: DTOProfissional.uf_registro,
-
-          // Procura pela especialidade na tabela. Caso já exista, resgata a existente. Do contrário, apenas cria uma nova.
-          profissional_especialidades: {
-            create: DTOProfissional.especialidades.map((nomeEspecialidade) => ({
-              especialidades: {
-                connectOrCreate: {
-                  where: { nome_especialidade: nomeEspecialidade },
-                  create: { nome_especialidade: nomeEspecialidade },
+      const novoProfissional =
+        await this.profissionalRepository.criarNovoProfissional(
+          {
+            usuarios: { connect: { id_usuario: novoUsuario.id_usuario } },
+            enderecos: { connect: { id_endereco: novoEndereco.id_endereco } },
+            nome: DTOProfissional.nome,
+            cpf: DTOProfissional.cpf,
+            tipo_registro: DTOProfissional.tipo_registro,
+            numero_registro: DTOProfissional.numero_registro,
+            uf_registro: DTOProfissional.uf_registro,
+            profissional_especialidades: {
+              create: DTOProfissional.especialidades.map(
+                (nomeEspecialidade) => ({
+                  especialidades: {
+                    connectOrCreate: {
+                      where: { nome_especialidade: nomeEspecialidade },
+                      create: { nome_especialidade: nomeEspecialidade },
+                    },
+                  },
+                })
+              ),
+            },
+            profissional_formacoes: {
+              create: DTOProfissional.formacoes.map((nomeFormacao) => ({
+                formacoes: {
+                  connectOrCreate: {
+                    where: { formacao: nomeFormacao },
+                    create: { formacao: nomeFormacao },
+                  },
                 },
-              },
-            })),
+              })),
+            },
           },
-          // Procura pela formação na tabela. Caso já exista, resgata a existente. Do contrário, apenas cria uma nova.
-          profissional_formacoes: {
-            create: DTOProfissional.formacoes.map((nomeFormacao) => ({
-              formacoes: {
-                connectOrCreate: {
-                  where: { formacao: nomeFormacao },
-                  create: { formacao: nomeFormacao },
-                },
-              },
-            })),
-          },
-        },
-      });
+          tx
+        );
 
-      await tx.telefones.create({
-        data: {
-          usuarios_id_usuario: novoUsuario.id_usuario,
+      await this.telefoneRepository.criarNovoTelefone(
+        {
+          usuarios: { connect: { id_usuario: novoUsuario.id_usuario } },
           ...DTOProfissional.telefone,
         },
-      });
+        tx
+      );
 
       const { senha, ...usuarioSeguro } = novoUsuario;
       return { usuario: usuarioSeguro, profissional: novoProfissional };

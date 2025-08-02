@@ -1,23 +1,39 @@
-import { PrismaClient, Prisma } from "../generated/prisma";
+import { Prisma } from "../generated/prisma";
+import prisma from "../config/prismaClient";
 import { timeStringToDate } from "../utils/time";
 import { v2 as cloudinary } from "cloudinary";
-import { HorariosTrabalhoDTO } from "../validators/profissionaisValidator";
-import { BuscarProfissionaisDTO } from "../validators/profissionaisValidator";
-import { AtualizarPerfilProfissionalDTO } from "../validators/profissionaisValidator";
-
-const prisma = new PrismaClient();
+import {
+  HorariosTrabalhoDTO,
+  BuscarProfissionaisDTO,
+  AtualizarPerfilProfissionalDTO,
+} from "../validators/profissionaisValidator";
+import { ProfissionalRepository } from "../repositories/ProfissionaisRepository";
+import { HorariosTrabalhoRepository } from "../repositories/HorariosTrabalhoRepository";
+import { AgendamentosRepository } from "../repositories/AgendamentosRepository";
+import { PacienteRepository } from "../repositories/PacientesRepository";
 
 export class ProfissionalService {
+  private profissionalRepository: ProfissionalRepository;
+  private horariosTrabalhoRepository: HorariosTrabalhoRepository;
+  private agendamentosRepository: AgendamentosRepository;
+  private pacienteRepository: PacienteRepository;
+
+  constructor() {
+    this.profissionalRepository = new ProfissionalRepository();
+    this.horariosTrabalhoRepository = new HorariosTrabalhoRepository();
+    this.agendamentosRepository = new AgendamentosRepository();
+    this.pacienteRepository = new PacienteRepository();
+  }
+
   public async atualizarGradeDeTrabalho(
     idProfissional: number,
     gradeDeTrabalho: HorariosTrabalhoDTO[]
   ) {
     return prisma.$transaction(async (tx) => {
-      await tx.horarios_trabalho.deleteMany({
-        where: {
-          profissionais_id_profissional: idProfissional,
-        },
-      });
+      await this.horariosTrabalhoRepository.deletarMuitos(
+        { profissionais_id_profissional: idProfissional },
+        tx
+      );
 
       const novosHorariosData = gradeDeTrabalho.map((horario) => ({
         profissionais_id_profissional: idProfissional,
@@ -25,49 +41,32 @@ export class ProfissionalService {
         horario_inicio: timeStringToDate(horario.horario_inicio),
         horario_fim: timeStringToDate(horario.horario_fim),
       }));
+      await this.horariosTrabalhoRepository.criarMuitos(novosHorariosData, tx);
 
-      await tx.horarios_trabalho.createMany({
-        data: novosHorariosData,
-      });
-
-      return tx.horarios_trabalho.findMany({
-        where: {
-          profissionais_id_profissional: idProfissional,
-        },
+      return this.horariosTrabalhoRepository.buscarMuitos({
+        profissionais_id_profissional: idProfissional,
       });
     });
   }
 
   public async calcularDisponibilidade(idProfissional: number, data: Date) {
-    // 1 = Segunda-feira, 2 = Terça-feira, etc...
     const diaDaSemana = data.getDay() === 0 ? 7 : data.getDay();
-    const horariosDisponiveis = await prisma.horarios_trabalho.findMany({
-      where: {
+    const horariosDisponiveis =
+      await this.horariosTrabalhoRepository.buscarMuitos({
         profissionais_id_profissional: idProfissional,
         dia_semana: diaDaSemana,
-      },
-    });
+      });
+    if (horariosDisponiveis.length === 0) return [];
 
-    if (horariosDisponiveis.length === 0) {
-      return [];
-    }
-
-    const agendamentosDoDia = await prisma.agendamentos.findMany({
-      where: {
-        profissionais_id_profissional: idProfissional,
-        data_horario_inicio: {
-          // Pega todos os agendamentos entre o início e o fim do dia solicitado.
-          gte: new Date(data.setHours(0, 0, 0, 0)),
-          lt: new Date(data.setHours(23, 59, 59, 999)),
-        },
-        status: "AGENDADO",
-      },
-    });
+    const agendamentosDoDia =
+      await this.agendamentosRepository.buscarMuitosPorProfissionalEData(
+        idProfissional,
+        data
+      );
 
     const slotsDisponiveis: string[] = [];
     const duracaoConsulta = 60;
     horariosDisponiveis.forEach((horario) => {
-      // Converte os tempos de início e fim do horário para minutos.
       const inicioMinutos =
         horario.horario_inicio.getUTCHours() * 60 +
         horario.horario_inicio.getUTCMinutes();
@@ -97,7 +96,6 @@ export class ProfissionalService {
             .padStart(2, "0");
           return `${horaAgendamento}:${minutoAgendamento}` === horarioSlot;
         });
-
         if (!estaOcupado) {
           slotsDisponiveis.push(horarioSlot);
         }
@@ -108,136 +106,74 @@ export class ProfissionalService {
   }
 
   public async atualizarFotoPerfil(idProfissional: number, urlDaFoto: string) {
-    const profissional = await prisma.profissionais.findUnique({
-      where: { id_profissional: idProfissional },
+    const profissional = await this.profissionalRepository.buscarUnico({
+      id_profissional: idProfissional,
     });
-
-    if (!profissional) {
+    if (!profissional)
       throw new Error("Perfil de profissional não encontrado.");
-    }
-
-    const profissionalAtualizado = await prisma.profissionais.update({
-      where: {
-        id_profissional: idProfissional,
-      },
-      data: {
-        foto_perfil_url: urlDaFoto,
-      },
+    return this.profissionalRepository.atualizar(idProfissional, {
+      foto_perfil_url: urlDaFoto,
     });
-
-    return profissionalAtualizado;
   }
 
   public async removerFotoPerfil(idProfissional: number) {
-    const profissional = await prisma.profissionais.findUnique({
-      where: { id_profissional: idProfissional },
-      select: { foto_perfil_url: true },
-    });
-    if (!profissional) {
+    const profissional = await this.profissionalRepository.buscarUnico(
+      { id_profissional: idProfissional },
+      { foto_perfil_url: true }
+    );
+    if (!profissional)
       throw new Error("Perfil de profissional não encontrado.");
-    }
 
     if (profissional.foto_perfil_url) {
       try {
-        // Extrai o "public_id" da URL. Ex: "cuidar-tea/fotos-perfil/nome_arquivo".
         const publicId = profissional.foto_perfil_url
           .split("/")
           .slice(-3)
           .join("/")
           .split(".")[0];
-
         await cloudinary.uploader.destroy(publicId);
       } catch (error) {
         console.error("Erro ao deletar a imagem antiga do Cloudinary:", error);
-        // Mesmo que falhe a deleção no Cloudinary, continuamos para limpar o banco.
       }
     }
 
-    const profissionalSemFoto = await prisma.profissionais.update({
-      where: {
-        id_profissional: idProfissional,
-      },
-      data: {
-        foto_perfil_url: null,
-      },
+    return this.profissionalRepository.atualizar(idProfissional, {
+      foto_perfil_url: null,
     });
-
-    return profissionalSemFoto;
   }
 
   public async atualizarPerfil(
     idProfissional: number,
     dados: AtualizarPerfilProfissionalDTO
   ) {
-    const profissional = await prisma.profissionais.findUnique({
-      where: { id_profissional: idProfissional },
+    const profissional = await this.profissionalRepository.buscarUnico({
+      id_profissional: idProfissional,
     });
-    if (!profissional) {
+    if (!profissional)
       throw new Error("Perfil de profissional não encontrado.");
-    }
-
-    const perfilAtualizado = await prisma.profissionais.update({
-      where: {
-        id_profissional: idProfissional,
-      },
-      data: dados,
-    });
-
-    return perfilAtualizado;
+    return this.profissionalRepository.atualizar(idProfissional, dados);
   }
 
   public async listarPacientesAtivos(idProfissional: number) {
-    const agendamentosAtivos = await prisma.agendamentos.findMany({
-      where: {
-        profissionais_id_profissional: idProfissional,
-        status: "AGENDADO",
-      },
-      select: {
-        pacientes_id_paciente: true,
-      },
-    });
-
+    const agendamentosAtivos =
+      await this.agendamentosRepository.buscarPacientesAtivosIds(
+        idProfissional
+      );
     const idsDosPacientes = [
       ...new Set(agendamentosAtivos.map((ag) => ag.pacientes_id_paciente)),
     ];
-    if (idsDosPacientes.length === 0) {
-      return [];
-    }
-
-    const pacientes = await prisma.pacientes.findMany({
-      where: {
-        id_paciente: {
-          in: idsDosPacientes,
-        },
-      },
-    });
-
-    return pacientes;
+    if (idsDosPacientes.length === 0) return [];
+    return this.pacienteRepository.buscarMuitosPorIds(idsDosPacientes);
   }
 
   public async buscarProfissionais(filtros: BuscarProfissionaisDTO) {
     const where: Prisma.profissionaisWhereInput = {};
 
-    // Se o filtro de avaliação foi passado, filtramos os IDs dos profissionais primeiro.
     if (filtros.nota_atendimento) {
-      const mediasDeAvaliacao = await (prisma.agendamentos.groupBy as any)({
-        by: ["profissionais_id_profissional"],
-        _avg: {
-          nota_atendimento: true,
-        },
-        having: {
-          nota_atendimento: {
-            _avg: {
-              gte: filtros.nota_atendimento,
-            },
-          },
-        },
-      });
-
-      const idsProfissionaisPorAvaliacao = mediasDeAvaliacao.map(
-        (a: { profissionais_id_profissional: number }) =>
-          a.profissionais_id_profissional
-      );
+      const idsProfissionaisPorAvaliacao =
+        await this.agendamentosRepository.buscarIdsProfissionaisPorNotaMedia(
+          filtros.nota_atendimento
+        );
       if (idsProfissionaisPorAvaliacao.length === 0) {
         return [];
       }
@@ -275,7 +211,7 @@ export class ProfissionalService {
       };
     }
 
-    const profissionais = await prisma.profissionais.findMany({
+    const profissionais = await this.profissionalRepository.buscarMuitos({
       where,
       include: {
         enderecos: true,
@@ -291,7 +227,7 @@ export class ProfissionalService {
             },
           },
           select: {
-            nota_atendimento: true, 
+            nota_atendimento: true,
           },
         },
       },
