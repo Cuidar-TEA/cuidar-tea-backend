@@ -43,6 +43,11 @@ export const atualizarPerfilProfissionalSchema = z.object({
       .nullable()
       .optional(),
     aceita_convenio: z.boolean().optional(),
+    atende_domicilio: z.boolean().optional(),
+    tags: z.array(z.string().min(1, "A tag não pode ser vazia.")).optional(),
+    idiomas: z
+      .array(z.string().min(1, "O idioma não pode ser vazio."))
+      .optional(),
   }),
 });
 

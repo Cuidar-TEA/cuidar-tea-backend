@@ -23,7 +23,7 @@ const profissionalController = new ProfissionalController();
  *   patch:
  *     summary: Atualiza parcialmente o perfil do profissional logado
  *     tags: [Profissionais]
- *     description: Permite que um profissional logado altere um ou mais campos do seu perfil, como descrição, valor da consulta ou status de convênio.
+ *     description: Permite que um profissional logado altere um ou mais campos do seu perfil.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -35,13 +35,28 @@ const profissionalController = new ProfissionalController();
  *             properties:
  *               descricao:
  *                 type: string
+ *                 nullable: true
  *                 example: "Nova biografia aqui."
  *               valor_consulta:
  *                 type: number
+ *                 nullable: true
  *                 example: 250.00
  *               aceita_convenio:
  *                 type: boolean
  *                 example: true
+ *               atende_domicilio:
+ *                 type: boolean
+ *                 example: false
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Terapia ABA", "Comunicação Alternativa"]
+ *               idiomas:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Português", "Inglês"]
  *     responses:
  *       '200':
  *         description: Perfil atualizado com sucesso.
@@ -52,7 +67,6 @@ const profissionalController = new ProfissionalController();
  *       '403':
  *         description: Acesso negado.
  */
-
 profissionaisRoutes.patch(
   "/perfil",
   authMiddleware,

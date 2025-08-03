@@ -149,9 +149,54 @@ export class ProfissionalService {
     const profissional = await this.profissionalRepository.buscarUnico({
       id_profissional: idProfissional,
     });
-    if (!profissional)
+    if (!profissional) {
       throw new Error("Perfil de profissional não encontrado.");
-    return this.profissionalRepository.atualizar(idProfissional, dados);
+    }
+
+    const dadosParaAtualizar: Prisma.profissionaisUpdateInput = {
+      descricao: dados.descricao,
+      valor_consulta: dados.valor_consulta,
+      aceita_convenio: dados.aceita_convenio,
+      atende_domicilio:
+        dados.atende_domicilio !== undefined
+          ? dados.atende_domicilio
+            ? 1
+            : 0
+          : undefined,
+    };
+
+    if (dados.tags) {
+      dadosParaAtualizar.profissional_tags = {
+        deleteMany: {},
+        create: dados.tags.map((nomeTag) => ({
+          tags: {
+            connectOrCreate: {
+              where: { nome_tag: nomeTag },
+              create: { nome_tag: nomeTag },
+            },
+          },
+        })),
+      };
+    }
+
+    if (dados.idiomas) {
+      dadosParaAtualizar.profissional_idiomas = {
+        deleteMany: {},
+        create: dados.idiomas.map((nomeIdioma) => ({
+          idiomas: {
+            connectOrCreate: {
+              where: { idioma: nomeIdioma },
+              create: { idioma: nomeIdioma },
+            },
+          },
+        })),
+      };
+    }
+
+    return this.profissionalRepository.atualizar(
+      idProfissional,
+      dadosParaAtualizar
+    );
   }
 
   public async listarPacientesAtivos(idProfissional: number) {
