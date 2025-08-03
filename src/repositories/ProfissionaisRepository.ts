@@ -29,6 +29,18 @@ export class ProfissionalRepository {
     return prisma.profissionais.update({
       where: { id_profissional: id },
       data,
+      include: {
+        profissional_tags: {
+          include: {
+            tags: true
+          }
+        },
+        profissional_idiomas: {
+          include: {
+            idiomas: true
+          }
+        }
+      }
     });
   }
 
