@@ -190,11 +190,10 @@ export class ProfissionalController {
         query: req.query,
       });
       const filtros: BuscarProfissionaisDTO = validatedQuery.query;
-      const profissionais = await profissionalService.buscarProfissionais(
-        filtros
-      );
 
-      return res.status(200).json(profissionais);
+      const resultado = await profissionalService.buscarProfissionais(filtros);
+
+      return res.status(200).json(resultado);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({

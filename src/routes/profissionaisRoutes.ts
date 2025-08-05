@@ -241,11 +241,23 @@ profissionaisRoutes.get("/pacientes-ativos", authMiddleware, (req, res) =>
  * @swagger
  * /api/profissionais:
  *   get:
- *     summary: Busca e filtra profissionais
+ *     summary: Busca, filtra e pagina profissionais
  *     tags:
  *       - Profissionais
- *     description: "Retorna uma lista de profissionais com base nos filtros fornecidos via query params. Rota pública."
+ *     description: "Retorna uma lista paginada de profissionais com base nos filtros fornecidos via query params. Rota pública."
  *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: "Número da página para a paginação."
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: "Número de resultados por página."
  *       - in: query
  *         name: especialidade
  *         schema:
@@ -297,6 +309,24 @@ profissionaisRoutes.get("/pacientes-ativos", authMiddleware, (req, res) =>
  *     responses:
  *       '200':
  *         description: "Lista de profissionais retornada com sucesso."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 profissionais:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *                   example: 150
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 limit:
+ *                   type: integer
+ *                   example: 10
  *       '400':
  *         description: "Filtro com formato inválido."
  */

@@ -212,88 +212,106 @@ export class ProfissionalService {
   }
 
   public async buscarProfissionais(filtros: BuscarProfissionaisDTO) {
+    const { page, limit, ...outrosFiltros } = filtros;
     const where: Prisma.profissionaisWhereInput = {};
 
-    if (filtros.nota_atendimento) {
+    if (outrosFiltros.nota_atendimento) {
       const idsProfissionaisPorAvaliacao =
         await this.agendamentosRepository.buscarIdsProfissionaisPorNotaMedia(
-          filtros.nota_atendimento
+          outrosFiltros.nota_atendimento
         );
       if (idsProfissionaisPorAvaliacao.length === 0) {
-        return [];
+        return { profissionais: [], total: 0, page, limit };
       }
       where.id_profissional = {
         in: idsProfissionaisPorAvaliacao,
       };
     }
 
-    if (filtros.aceita_convenio !== undefined) {
-      where.aceita_convenio = filtros.aceita_convenio;
+    if (outrosFiltros.aceita_convenio !== undefined) {
+      where.aceita_convenio = outrosFiltros.aceita_convenio;
     }
-    if (filtros.atende_domicilio !== undefined) {
-      where.atende_domicilio = filtros.atende_domicilio ? 1 : 0;
+    if (outrosFiltros.atende_domicilio !== undefined) {
+      where.atende_domicilio = outrosFiltros.atende_domicilio ? 1 : 0;
     }
-    if (filtros.valor_consulta) {
+    if (outrosFiltros.valor_consulta) {
       where.valor_consulta = {
-        lte: filtros.valor_consulta,
+        lte: outrosFiltros.valor_consulta,
       };
     }
-    if (filtros.cidade || filtros.estado) {
+    if (outrosFiltros.cidade || outrosFiltros.estado) {
       where.enderecos = {
-        cidade: filtros.cidade ? { equals: filtros.cidade } : undefined,
-        estado: filtros.estado ? { equals: filtros.estado } : undefined,
+        cidade: outrosFiltros.cidade
+          ? { equals: outrosFiltros.cidade }
+          : undefined,
+        estado: outrosFiltros.estado
+          ? { equals: outrosFiltros.estado }
+          : undefined,
       };
     }
-    if (filtros.especialidade) {
+    if (outrosFiltros.especialidade) {
       where.profissional_especialidades = {
         some: {
           especialidades: {
             nome_especialidade: {
-              equals: filtros.especialidade,
+              equals: outrosFiltros.especialidade,
             },
           },
         },
       };
     }
-    if (filtros.nome) {
+    if (outrosFiltros.nome) {
       where.nome = {
-        contains: filtros.nome,
+        contains: outrosFiltros.nome,
       };
     }
-    if (filtros.formacao) {
+    if (outrosFiltros.formacao) {
       where.profissional_formacoes = {
         some: {
           formacoes: {
             formacao: {
-              equals: filtros.formacao,
+              equals: outrosFiltros.formacao,
             },
           },
         },
       };
     }
 
-    const profissionais = await this.profissionalRepository.buscarMuitos({
-      where,
-      include: {
-        enderecos: true,
-        profissional_especialidades: {
-          include: {
-            especialidades: true,
-          },
-        },
-        agendamentos: {
-          where: {
-            nota_atendimento: {
-              not: null,
+    const skip = (page - 1) * limit;
+    const take = limit;
+
+    const [profissionais, total] = await prisma.$transaction([
+      prisma.profissionais.findMany({
+        where,
+        include: {
+          enderecos: true,
+          profissional_especialidades: {
+            include: {
+              especialidades: true,
             },
           },
-          select: {
-            nota_atendimento: true,
+          agendamentos: {
+            where: {
+              nota_atendimento: {
+                not: null,
+              },
+            },
+            select: {
+              nota_atendimento: true,
+            },
           },
         },
-      },
-    });
+        skip,
+        take,
+      }),
+      prisma.profissionais.count({ where }),
+    ]);
 
-    return profissionais;
+    return {
+      profissionais,
+      total,
+      page,
+      limit,
+    };
   }
 }
