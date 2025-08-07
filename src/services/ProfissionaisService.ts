@@ -11,18 +11,22 @@ import { ProfissionalRepository } from "../repositories/ProfissionaisRepository"
 import { HorariosTrabalhoRepository } from "../repositories/HorariosTrabalhoRepository";
 import { AgendamentosRepository } from "../repositories/AgendamentosRepository";
 import { PacienteRepository } from "../repositories/PacientesRepository";
+import { EstatisticasService } from "./EstatisticasService";
+import { ProfissionalDestaque } from "../DTOs/profissionalDTO";
 
 export class ProfissionalService {
   private profissionalRepository: ProfissionalRepository;
   private horariosTrabalhoRepository: HorariosTrabalhoRepository;
   private agendamentosRepository: AgendamentosRepository;
   private pacienteRepository: PacienteRepository;
+  private estatisticasService: EstatisticasService;
 
   constructor() {
     this.profissionalRepository = new ProfissionalRepository();
     this.horariosTrabalhoRepository = new HorariosTrabalhoRepository();
     this.agendamentosRepository = new AgendamentosRepository();
     this.pacienteRepository = new PacienteRepository();
+    this.estatisticasService = new EstatisticasService();
   }
 
   public async atualizarGradeDeTrabalho(
@@ -313,5 +317,102 @@ export class ProfissionalService {
       page,
       limit,
     };
+  }
+
+  private async _encontrarProximaDisponibilidade(
+    idProfissional: number
+  ): Promise<string> {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const slots = await this.calcularDisponibilidade(idProfissional, hoje);
+
+    if (slots.length > 0) {
+      return `Hoje às ${slots[slots.length - 1]}`;
+    }
+
+    return "Indisponível";
+  }
+
+  public async listarDestaques() {
+    const mediaGeral = await this.estatisticasService.getMediaAvaliacoes();
+    const idsProfissionaisAcimaDaMedia =
+      await this.agendamentosRepository.buscarIdsProfissionaisPorNotaMedia(
+        mediaGeral
+      );
+    if (idsProfissionaisAcimaDaMedia.length === 0) {
+      return [];
+    }
+
+    const idsDestaque = idsProfissionaisAcimaDaMedia.slice(0, 5);
+    const profissionais: ProfissionalDestaque[] =
+      await this.profissionalRepository.buscarMuitos({
+        where: {
+          id_profissional: {
+            in: idsDestaque,
+          },
+        },
+        include: {
+          enderecos: {
+            select: {
+              cidade: true,
+              estado: true,
+            },
+          },
+          profissional_formacoes: {
+            include: {
+              formacoes: true,
+            },
+          },
+          agendamentos: {
+            where: {
+              nota_atendimento: {
+                not: null,
+              },
+            },
+            select: {
+              nota_atendimento: true,
+            },
+          },
+        },
+      });
+
+    const profissionaisComMedia = await Promise.all(
+      profissionais.map(async (p) => {
+        const notas = p.agendamentos
+          .map((a) => a.nota_atendimento)
+          .filter((n): n is number => n !== null);
+
+        const mediaIndividual =
+          notas.length > 0
+            ? parseFloat(
+                (
+                  notas.reduce((a: number, b: number) => a + b, 0) /
+                  notas.length
+                ).toFixed(1)
+              )
+            : 0;
+
+        const proximaDisponibilidade =
+          await this._encontrarProximaDisponibilidade(p.id_profissional);
+
+        return {
+          id_profissional: p.id_profissional,
+          nome: p.nome,
+          foto_perfil_url: p.foto_perfil_url,
+          formacao:
+            p.profissional_formacoes[0]?.formacoes.formacao || "Não informada",
+          cidade: p.enderecos?.cidade,
+          estado: p.enderecos?.estado,
+          valor_consulta: p.valor_consulta,
+          avaliacao_media: mediaIndividual,
+          total_avaliacoes: notas.length,
+          proxima_disponibilidade: proximaDisponibilidade,
+        };
+      })
+    );
+
+    return profissionaisComMedia.sort(
+      (a, b) => b.avaliacao_media - a.avaliacao_media
+    );
   }
 }

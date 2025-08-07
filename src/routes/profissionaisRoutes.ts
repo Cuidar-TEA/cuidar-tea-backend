@@ -334,4 +334,51 @@ profissionaisRoutes.get("/", validate(buscarProfissionaisSchema), (req, res) =>
   profissionalController.buscar(req, res)
 );
 
+/**
+ * @swagger
+ * /api/profissionais/destaques:
+ *   get:
+ *     summary: Lista os profissionais em destaque
+ *     tags: [Profissionais]
+ *     description: "Retorna uma lista dos 5 profissionais com as melhores avaliações (acima da média geral), ideais para a seção de destaques da aplicação."
+ *     responses:
+ *       '200':
+ *         description: Lista de profissionais em destaque retornada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id_profissional:
+ *                     type: integer
+ *                   nome:
+ *                     type: string
+ *                   foto_perfil_url:
+ *                     type: string
+ *                     nullable: true
+ *                   formacao:
+ *                     type: string
+ *                     description: "A principal formação do profissional (ex: Fonoaudióloga)."
+ *                   cidade:
+ *                     type: string
+ *                   estado:
+ *                     type: string
+ *                   valor_consulta:
+ *                     type: number
+ *                   avaliacao_media:
+ *                     type: number
+ *                   total_avaliacoes:
+ *                     type: integer
+ *                   proxima_disponibilidade:
+ *                     type: string
+ *                     example: "Hoje às 17:00"
+ *       '500':
+ *         description: Erro interno do servidor.
+ */
+profissionaisRoutes.get("/destaques", (req, res) =>
+  profissionalController.listarDestaques(req, res)
+);
+
 export default profissionaisRoutes;
