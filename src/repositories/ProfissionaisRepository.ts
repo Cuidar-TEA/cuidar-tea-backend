@@ -44,8 +44,10 @@ export class ProfissionalRepository {
     });
   }
 
-  public async buscarMuitos(args: Prisma.profissionaisFindManyArgs) {
-    return prisma.profissionais.findMany(args);
+  public async buscarMuitos<T extends Prisma.profissionaisFindManyArgs>(
+    args: T
+  ): Promise<Prisma.profissionaisGetPayload<T>[]> {
+    return prisma.profissionais.findMany(args) as any;
   }
 
   public async buscarUnico(

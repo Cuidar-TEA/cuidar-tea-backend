@@ -208,4 +208,14 @@ export class ProfissionalController {
         .json({ message: "Ocorreu um erro interno ao buscar profissionais." });
     }
   }
+
+  public async listarDestaques(req: Request, res: Response): Promise<Response> {
+    try {
+      const destaques = await profissionalService.listarDestaques();
+      return res.status(200).json(destaques);
+    } catch (error: any) {
+      console.error("Erro ao listar profissionais em destaque:", error);
+      return res.status(500).json({ message: "Ocorreu um erro interno." });
+    }
+  }
 }
