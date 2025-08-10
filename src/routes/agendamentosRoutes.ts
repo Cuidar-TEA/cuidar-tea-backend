@@ -211,4 +211,51 @@ agendamentosRoutes.get("/meus", authMiddleware, (req, res) =>
   agendamentosController.listarMeusAgendamentos(req, res)
 );
 
+/**
+ * @swagger
+ * /api/agendamentos/proximos:
+ *   get:
+ *     summary: Lista as próximas consultas do paciente
+ *     tags: [Agendamentos]
+ *     description: Retorna uma lista com os próximos agendamentos do paciente autenticado, ideal para a tela de dashboard.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 4
+ *         description: "O número de agendamentos a serem retornados (mín: 1, máx: 10)."
+ *     responses:
+ *       '200':
+ *         description: Lista de próximos agendamentos retornada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id_agendamento:
+ *                     type: integer
+ *                   nome_profissional:
+ *                     type: string
+ *                   especialidade:
+ *                     type: string
+ *                   data_formatada:
+ *                     type: string
+ *                     example: "20/08/2025 às 14:00"
+ *                   status:
+ *                     type: string
+ *                     example: "AGENDADO"
+ *       '401':
+ *         description: Não autorizado (token inválido ou não fornecido).
+ *       '403':
+ *         description: Acesso negado (usuário logado não é um paciente).
+ */
+agendamentosRoutes.get("/proximos", authMiddleware, (req, res) =>
+  agendamentosController.listarProximosAgendamentos(req, res)
+);
+
 export default agendamentosRoutes;

@@ -183,4 +183,40 @@ export class AgendamentosService {
 
     return agendamentos;
   }
+
+  public async listarProximosAgendamentos(idPaciente: number, limit: number) {
+    const proximosAgendamentos =
+      await this.agendamentosRepository.buscarProximosAgendamentosPorPaciente(
+        idPaciente,
+        limit
+      );
+    if (!proximosAgendamentos) {
+      return [];
+    }
+
+    const agendamentosFormatados = proximosAgendamentos.map((agendamento) => {
+      const data = new Date(agendamento.data_horario_inicio);
+      const dataFormatada = data.toLocaleDateString("pt-BR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const horaFormatada = data.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return {
+        id_agendamento: agendamento.id_agendamento,
+        nome_profissional: agendamento.profissionais.nome,
+        especialidade:
+          agendamento.profissionais.profissional_especialidades[0]
+            ?.especialidades.nome_especialidade || "Não informada",
+        data_formatada: `${dataFormatada} às ${horaFormatada}`,
+        status: agendamento.status,
+      };
+    });
+
+    return agendamentosFormatados;
+  }
 }

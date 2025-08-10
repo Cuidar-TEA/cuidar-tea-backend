@@ -33,6 +33,12 @@ export const avaliarAgendamentoSchema = z.object({
   }),
 });
 
+export const listarProximosAgendamentosSchema = z.object({
+  query: z.object({
+    limit: z.coerce.number().int().min(1).max(10).optional().default(4),
+  }),
+});
+
 export type CriarAgendamentoDTO = z.infer<
   typeof criarAgendamentoSchema
 >["body"];
@@ -40,3 +46,7 @@ export type CriarAgendamentoDTO = z.infer<
 export type AvaliarAgendamentoDTO = z.infer<
   typeof avaliarAgendamentoSchema
 >["body"];
+
+export type ListarProximosAgendamentosDTO = z.infer<
+  typeof listarProximosAgendamentosSchema
+>["query"];
