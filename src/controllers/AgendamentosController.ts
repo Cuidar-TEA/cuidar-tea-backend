@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { AgendamentosService } from "../services/AgendamentosService";
 import { CriarAgendamentoDTO } from "../validators/agendamentosValidator";
 import { AvaliarAgendamentoDTO } from "../validators/agendamentosValidator";
+import { listarProximosAgendamentosSchema } from "../validators/agendamentosValidator";
+import z from "zod";
 
 const agendamentosService = new AgendamentosService();
 
@@ -163,6 +165,42 @@ export class AgendamentosController {
       return res.status(200).json(resultado);
     } catch (error: any) {
       console.error("Erro ao listar agendamentos do paciente:", error);
+      return res.status(500).json({
+        message: "Ocorreu um erro interno ao processar sua solicitação.",
+      });
+    }
+  }
+
+  public async listarProximosAgendamentos(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
+    try {
+      const idPaciente = req.usuario?.id_paciente;
+      if (!idPaciente) {
+        return res.status(403).json({
+          message:
+            "Acesso negado. Apenas pacientes podem visualizar suas próximas consultas.",
+        });
+      }
+
+      const { limit } = listarProximosAgendamentosSchema.parse({
+        query: req.query,
+      }).query;
+      const resultado = await agendamentosService.listarProximosAgendamentos(
+        idPaciente,
+        limit
+      );
+
+      return res.status(200).json(resultado);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Erro de validação nos parâmetros.",
+          errors: error.flatten(),
+        });
+      }
+      console.error("Erro ao listar próximos agendamentos:", error);
       return res.status(500).json({
         message: "Ocorreu um erro interno ao processar sua solicitação.",
       });

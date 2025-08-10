@@ -148,4 +148,39 @@ export class AgendamentosRepository {
       },
     });
   }
+
+  public async buscarProximosAgendamentosPorPaciente(
+    idPaciente: number,
+    limit: number
+  ) {
+    return prisma.agendamentos.findMany({
+      where: {
+        pacientes_id_paciente: idPaciente,
+        status: "AGENDADO",
+        data_horario_inicio: {
+          gte: new Date(),
+        },
+      },
+      orderBy: {
+        data_horario_inicio: "asc",
+      },
+      take: limit,
+      include: {
+        profissionais: {
+          select: {
+            nome: true,
+            profissional_especialidades: {
+              select: {
+                especialidades: {
+                  select: {
+                    nome_especialidade: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 }
