@@ -218,4 +218,19 @@ export class ProfissionalController {
       return res.status(500).json({ message: "Ocorreu um erro interno." });
     }
   }
+
+  public async buscarPorId(req: Request, res: Response): Promise<Response> {
+    try {
+      const id = req.params.id;
+      const profissional = await profissionalService.buscarPorId(Number(id));
+      if (!profissional)
+        return res
+          .status(404)
+          .json({ message: "Profissional não encontrado." });
+      return res.status(200).json(profissional);
+    } catch (error: any) {
+      console.error("Erro ao buscar profissional por id:", error);
+      return res.status(500).json({ message: "Erro interno do servidor." });
+    }
+  }
 }

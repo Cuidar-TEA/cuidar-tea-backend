@@ -46,10 +46,10 @@ export const authMiddleware = async (
   const payload = decodedPayload as JwtPayloadWithId;
 
   try {
-    const profissional = await profissionalRepository.buscarProfissionalPorId(
+    const profissional = await profissionalRepository.buscarProfissionalPorIdUsuario(
       payload.id_usuario
     );
-    const paciente = await pacienteRepository.buscarPacientePorId(
+    const paciente = await pacienteRepository.buscarPacientePorIdUsuario(
       payload.id_usuario
     );
     if (!profissional && !paciente) {

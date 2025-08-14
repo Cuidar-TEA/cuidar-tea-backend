@@ -13,7 +13,7 @@ export class PacienteRepository {
     return tx.pacientes.create({ data });
   }
 
-  public async buscarPacientePorId(idUsuario: number) {
+  public async buscarPacientePorIdUsuario(idUsuario: number) {
     return prisma.pacientes.findFirst({
       where: {
         usuarios_id_usuario: idUsuario,

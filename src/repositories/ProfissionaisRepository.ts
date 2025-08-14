@@ -13,7 +13,7 @@ export class ProfissionalRepository {
     return tx.profissionais.create({ data });
   }
 
-  public async buscarProfissionalPorId(idUsuario: number) {
+  public async buscarProfissionalPorIdUsuario(idUsuario: number) {
     return prisma.profissionais.findFirst({
       where: {
         usuarios_id_usuario: idUsuario,
@@ -32,15 +32,15 @@ export class ProfissionalRepository {
       include: {
         profissional_tags: {
           include: {
-            tags: true
-          }
+            tags: true,
+          },
         },
         profissional_idiomas: {
           include: {
-            idiomas: true
-          }
-        }
-      }
+            idiomas: true,
+          },
+        },
+      },
     });
   }
 
@@ -55,5 +55,35 @@ export class ProfissionalRepository {
     select?: Prisma.profissionaisSelect
   ) {
     return prisma.profissionais.findUnique({ where, select });
+  }
+
+  public async buscarProfissionalPorId(id: number) {
+    return prisma.profissionais.findUnique({
+      where: {
+        id_profissional: id,
+      },
+      include: {
+        profissional_tags: {
+          include: {
+            tags: true,
+          },
+        },
+        profissional_idiomas: {
+          include: {
+            idiomas: true,
+          },
+        },
+        profissional_especialidades: {
+          include: {
+            especialidades: true,
+          },
+        },
+        profissional_formacoes: {
+          include: {
+            formacoes: true,
+          },
+        },
+      },
+    });
   }
 }
