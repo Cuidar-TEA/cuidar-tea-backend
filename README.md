@@ -58,7 +58,7 @@ Este projeto utiliza Docker e Docker Compose para garantir um ambiente de desenv
 3.  **Suba os Contêineres:**
     Com o Docker Desktop em execução, rode o seguinte comando na raiz do projeto backend:
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
     O Docker irá construir a imagem da API, baixar a imagem do MySQL e iniciar os dois contêineres.
 
@@ -74,7 +74,7 @@ Este projeto utiliza Docker e Docker Compose para garantir um ambiente de desenv
 ### Comandos Úteis do Docker
 - **Para parar os contêineres:**
   ```bash
-  docker-compose down
+  docker compose down
   ```
 - **Para acessar o terminal dentro do contêiner da API:**
   ```bash
