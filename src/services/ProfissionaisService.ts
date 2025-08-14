@@ -415,4 +415,8 @@ export class ProfissionalService {
       (a, b) => b.avaliacao_media - a.avaliacao_media
     );
   }
+
+  public async buscarPorId(id: number) {
+    return this.profissionalRepository.buscarProfissionalPorId(id);
+  }
 }

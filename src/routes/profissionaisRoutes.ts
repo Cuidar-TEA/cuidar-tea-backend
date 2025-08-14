@@ -381,4 +381,125 @@ profissionaisRoutes.get("/destaques", (req, res) =>
   profissionalController.listarDestaques(req, res)
 );
 
+/**
+ * @swagger
+ * /api/profissionais/{id}:
+ *   get:
+ *     summary: Busca um profissional específico pelo ID
+ *     tags: [Profissionais]
+ *     description: Retorna os dados detalhados de um único profissional, ideal para a página de perfil.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: O ID do profissional a ser buscado.
+ *     responses:
+ *       '200':
+ *         description: Dados do profissional retornados com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id_profissional:
+ *                   type: integer
+ *                 usuarios_id_usuario:
+ *                   type: integer
+ *                 enderecos_id_endereco:
+ *                   type: integer
+ *                 foto_perfil_url:
+ *                   type: string
+ *                 nome:
+ *                   type: string
+ *                 cpf:
+ *                   type: string
+ *                 tipo_registro:
+ *                   type: string
+ *                 numero_registro:
+ *                   type: string
+ *                 uf_registro:
+ *                   type: string
+ *                 descricao:
+ *                   type: string
+ *                 valor_consulta:
+ *                   type: string
+ *                 aceita_convenio:
+ *                   type: boolean
+ *                 atende_domicilio:
+ *                   type: integer
+ *                 profissional_tags:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tags_id_tag:
+ *                         type: integer
+ *                       profissionais_id_profissional:
+ *                         type: integer
+ *                       tags:
+ *                         type: object
+ *                         properties:
+ *                           id_tag:
+ *                             type: integer
+ *                           nome_tag:
+ *                             type: string
+ *                 profissional_idiomas:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       idiomas_id_idioma:
+ *                         type: integer
+ *                       profissionais_id_profissional:
+ *                         type: integer
+ *                       idiomas:
+ *                         type: object
+ *                         properties:
+ *                           id_idioma:
+ *                             type: integer
+ *                           idioma:
+ *                             type: string
+ *                 profissional_especialidades:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       profissionais_id_profissional:
+ *                         type: integer
+ *                       especialidades_id_especialidade:
+ *                         type: integer
+ *                       especialidades:
+ *                         type: object
+ *                         properties:
+ *                           id_especialidade:
+ *                             type: integer
+ *                           nome_especialidade:
+ *                             type: string
+ *                 profissional_formacoes:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       formacoes_id_formacao:
+ *                         type: integer
+ *                       profissionais_id_profissional:
+ *                         type: integer
+ *                       formacoes:
+ *                         type: object
+ *                         properties:
+ *                           id_formacao:
+ *                             type: integer
+ *                           formacao:
+ *                             type: string
+ *       '404':
+ *         description: Profissional não encontrado.
+ *       '500':
+ *         description: Erro interno do servidor.
+ */
+profissionaisRoutes.get("/:id", (req, res) => {
+  profissionalController.buscarPorId(req, res);
+});
+
 export default profissionaisRoutes;
